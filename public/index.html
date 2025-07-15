@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codenames: Duet</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Codenames: Duet</h1>
+            <div id="game-info">
+                <span id="current-player">Player 1's Turn</span>
+                <span id="moves-left">Moves: 9/9</span>
+                <button id="new-game-btn">New Game</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="clue-section">
+                <div id="current-clue">
+                    <span id="clue-text">No clue given</span>
+                    <span id="guesses-left"></span>
+                </div>
+                
+                <div id="clue-input" class="hidden">
+                    <input type="text" id="clue-word" placeholder="Enter clue word">
+                    <input type="number" id="clue-number" min="1" max="5" placeholder="Number">
+                    <button id="give-clue-btn">Give Clue</button>
+                    <button id="cancel-clue-btn">Cancel</button>
+                </div>
+                
+                <div id="clue-actions">
+                    <button id="show-clue-input-btn">Give Clue</button>
+                    <button id="end-turn-btn" class="hidden">End Turn</button>
+                </div>
+            </div>
+
+            <div id="game-board"></div>
+            
+            <div id="game-status">
+                <div id="win-message" class="hidden">Congratulations! You won!</div>
+                <div id="lose-message" class="hidden">Game Over! You hit an assassin!</div>
+                <div id="timeout-message" class="hidden">Game Over! You ran out of moves!</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

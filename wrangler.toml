@@ -1,0 +1,17 @@
+name = "codenames-duet-worker"
+main = "worker/index.js"
+compatibility_date = "2024-12-18"
+
+[durable_objects]
+bindings = [
+  { name = "GAME_STATE", class_name = "GameState" }
+]
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+preview_id = "749ebb2f2f8c4bbe80c0ea7b3924d2a9"
+id = "dc817117f5044174abb7ba45f93b986d"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameState"]
