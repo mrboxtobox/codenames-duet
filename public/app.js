@@ -53,6 +53,8 @@ class CodenamesDuetApp {
             this.updateUI();
         } catch (error) {
             console.error('Error loading game state:', error);
+            // Create new game if state loading fails
+            this.newGame();
         }
     }
 
@@ -62,6 +64,7 @@ class CodenamesDuetApp {
             this.updateUI();
         } catch (error) {
             console.error('Error creating new game:', error);
+            alert('Error creating new game. Please refresh the page.');
         }
     }
 
@@ -96,6 +99,9 @@ class CodenamesDuetApp {
                 clue: clueWord,
                 number: number
             });
+            
+            // Check for Easter eggs
+            this.checkEasterEggs(clueWord);
 
             if (result.success) {
                 this.gameState = result.gameState;
@@ -233,11 +239,48 @@ class CodenamesDuetApp {
     showGameOverMessage(won) {
         setTimeout(() => {
             if (won) {
-                alert('Congratulations! You found all the green cards!');
+                alert('Congratulations! You found all the green cards! 🎉');
             } else {
-                alert('Game Over! Better luck next time!');
+                alert('Game Over! Better luck next time! 💚');
             }
         }, 500);
+    }
+    
+    checkEasterEggs(clueWord) {
+        const word = clueWord.toLowerCase();
+        const easterEggs = {
+            'tbaby': '💚 T Baby is the best teammate ever! 💚',
+            't baby': '💚 T Baby is the best teammate ever! 💚',
+            'tfunds': '💰 T Funds bringing the financial wisdom! 💰',
+            't funds': '💰 T Funds bringing the financial wisdom! 💰',
+            'tomisin': '👑 Queen Tomisin graces us with her presence! 👑',
+            'baby': '🍼 Such a sweet clue! 🍼',
+            'love': '💕 Love is in the air! 💕',
+            'heart': '❤️ My heart skips a beat! ❤️',
+            'beautiful': '🌸 Just like someone I know! 🌸',
+            'queen': '👸 Yes, your majesty! 👸',
+            'princess': '🏰 Princess vibes! 🏰',
+            'angel': '😇 Heavenly clue! 😇',
+            'sunshine': '☀️ You brighten my day! ☀️',
+            'star': '⭐ You\'re my shining star! ⭐',
+            'gem': '💎 Precious like a gem! 💎',
+            'treasure': '🏆 The real treasure is playing with you! 🏆'
+        };
+        
+        if (easterEggs[word]) {
+            this.showEasterEgg(easterEggs[word]);
+        }
+    }
+    
+    showEasterEgg(message) {
+        const easterEggDiv = document.createElement('div');
+        easterEggDiv.className = 'easter-egg';
+        easterEggDiv.textContent = message;
+        document.body.appendChild(easterEggDiv);
+        
+        setTimeout(() => {
+            easterEggDiv.remove();
+        }, 3000);
     }
 }
 
