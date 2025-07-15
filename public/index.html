@@ -10,6 +10,38 @@
     <div id="app">
         <header>
             <h1>Codenames: Duet</h1>
+            
+            <!-- Player Settings Panel -->
+            <div id="player-settings" class="settings-panel">
+                <div class="settings-row">
+                    <label for="player-name">Your Name:</label>
+                    <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+                </div>
+                <div class="settings-row">
+                    <label for="theme-select">Theme:</label>
+                    <select id="theme-select">
+                        <option value="green">Green Garden</option>
+                        <option value="pink">Pink Blush</option>
+                        <option value="blue">Ocean Blue</option>
+                        <option value="purple">Royal Purple</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Game Code Display -->
+            <div id="game-code-display" class="hidden">
+                <div class="game-code-container">
+                    <span class="game-code-label">Game Code:</span>
+                    <span id="game-code-text" class="game-code">------</span>
+                    <button id="copy-code-btn" class="copy-btn" title="Copy game code">📋</button>
+                </div>
+                <div class="share-url-container">
+                    <span class="share-label">Share Link:</span>
+                    <input type="text" id="share-url" readonly>
+                    <button id="copy-link-btn" class="copy-btn" title="Copy share link">🔗</button>
+                </div>
+            </div>
+            
             <div id="game-info">
                 <div class="game-status-left">
                     <span id="current-player">Player 1's Turn</span>

@@ -8,6 +8,8 @@ class CodenamesDuetApp {
         this.websocket = null;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
+        this.playerName = '';
+        this.theme = 'green';
         this.init();
     }
 
@@ -35,10 +37,23 @@ class CodenamesDuetApp {
         document.getElementById('join-game-btn').addEventListener('click', () => this.showJoinGameInput());
         document.getElementById('join-by-code-btn').addEventListener('click', () => this.joinGameByCodeInput());
         document.getElementById('cancel-join-btn').addEventListener('click', () => this.hideJoinGameInput());
+        document.getElementById('copy-code-btn').addEventListener('click', () => this.copyGameCode());
+        document.getElementById('copy-link-btn').addEventListener('click', () => this.copyShareLink());
+        document.getElementById('player-name').addEventListener('change', () => this.updatePlayerName());
+        document.getElementById('theme-select').addEventListener('change', () => this.updateTheme());
+        
+        // Load saved preferences
+        this.loadPreferences();
     }
 
     async apiCall(endpoint, method = 'GET', body = null) {
-        const url = `${this.apiBase}${endpoint}?gameId=${this.gameId}`;
+        let url;
+        if (endpoint.includes('?')) {
+            url = `${this.apiBase}${endpoint}`;
+        } else {
+            url = `${this.apiBase}${endpoint}?gameId=${this.gameId}`;
+        }
+        
         const options = {
             method,
             headers: {
@@ -79,7 +94,10 @@ class CodenamesDuetApp {
     async newGame() {
         try {
             this.disconnectWebSocket();
-            this.gameState = await this.apiCall('/game/new', 'POST');
+            // Generate a random game ID for the new game
+            const newGameId = 'game_' + Math.random().toString(36).substr(2, 9);
+            this.gameId = newGameId;
+            this.gameState = await this.apiCall(`/game/new?gameId=${newGameId}`, 'POST');
             if (this.gameState.gameCode) {
                 this.gameId = this.gameState.gameCode;
                 this.connectWebSocket();
@@ -186,8 +204,11 @@ class CodenamesDuetApp {
     updateUI() {
         if (!this.gameState) return;
 
-        // Update player info
-        document.getElementById('current-player').textContent = `Player ${this.gameState.currentPlayer}'s Turn`;
+        // Update player info with personalization
+        const currentPlayerText = this.playerName 
+            ? `${this.playerName}'s Turn` 
+            : `Player ${this.gameState.currentPlayer}'s Turn`;
+        document.getElementById('current-player').textContent = currentPlayerText;
         document.getElementById('moves-left').textContent = `Moves: ${this.gameState.moves}/${this.gameState.maxMoves}`;
 
         // Update player count and game code info
@@ -195,12 +216,15 @@ class CodenamesDuetApp {
             this.updatePlayerCount(this.gameState.playerCount);
         }
         
-        // Show/hide share button based on game code availability
+        // Show/hide game code display and share button
+        const gameCodeDisplay = document.getElementById('game-code-display');
         const shareBtn = document.getElementById('share-game-btn');
         if (this.gameState.gameCode) {
+            this.showGameCode(this.gameState.gameCode);
             shareBtn.classList.remove('hidden');
             shareBtn.title = `Game Code: ${this.gameState.gameCode}`;
         } else {
+            gameCodeDisplay.classList.add('hidden');
             shareBtn.classList.add('hidden');
         }
 
@@ -506,6 +530,69 @@ class CodenamesDuetApp {
             console.error('Error joining game:', error);
             alert('Could not join game. Please check the code and try again.');
         }
+    }
+    
+    showGameCode(gameCode) {
+        const gameCodeDisplay = document.getElementById('game-code-display');
+        const gameCodeText = document.getElementById('game-code-text');
+        const shareUrl = document.getElementById('share-url');
+        
+        gameCodeText.textContent = gameCode;
+        const gameUrl = `${window.location.origin}${window.location.pathname}?code=${gameCode}`;
+        shareUrl.value = gameUrl;
+        
+        gameCodeDisplay.classList.remove('hidden');
+    }
+    
+    copyGameCode() {
+        const gameCodeText = document.getElementById('game-code-text').textContent;
+        navigator.clipboard.writeText(gameCodeText).then(() => {
+            this.showNotification('Game code copied! 📋');
+        }).catch(() => {
+            this.showNotification('Failed to copy game code');
+        });
+    }
+    
+    copyShareLink() {
+        const shareUrl = document.getElementById('share-url').value;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            this.showNotification('Share link copied! 🔗');
+        }).catch(() => {
+            this.showNotification('Failed to copy share link');
+        });
+    }
+    
+    updatePlayerName() {
+        const playerName = document.getElementById('player-name').value.trim();
+        this.playerName = playerName;
+        localStorage.setItem('codenames-player-name', playerName);
+        
+        if (playerName) {
+            this.checkEasterEggs(playerName);
+        }
+    }
+    
+    updateTheme() {
+        const theme = document.getElementById('theme-select').value;
+        this.theme = theme;
+        document.body.className = `theme-${theme}`;
+        localStorage.setItem('codenames-theme', theme);
+        
+        this.showNotification(`Theme changed to ${theme}! ✨`);
+    }
+    
+    loadPreferences() {
+        const savedName = localStorage.getItem('codenames-player-name');
+        const savedTheme = localStorage.getItem('codenames-theme') || 'green';
+        
+        if (savedName) {
+            document.getElementById('player-name').value = savedName;
+            this.playerName = savedName;
+        }
+        
+        document.getElementById('theme-select').value = savedTheme;
+        this.theme = savedTheme;
+        document.body.className = `theme-${savedTheme}`;
     }
 }
 

@@ -6,9 +6,43 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #f1f8e9;
+    background: var(--background, #f1f8e9);
     min-height: 100vh;
-    color: #2e7d32;
+    color: var(--primary-dark, #2e7d32);
+    transition: all 0.3s ease;
+}
+
+/* Theme Variables */
+body.theme-green {
+    --primary-color: #4caf50;
+    --primary-dark: #2e7d32;
+    --primary-light: #c8e6c9;
+    --background: #f1f8e9;
+    --surface: #e8f5e8;
+}
+
+body.theme-pink {
+    --primary-color: #e91e63;
+    --primary-dark: #ad1457;
+    --primary-light: #f8bbd9;
+    --background: #fce4ec;
+    --surface: #f3e5f5;
+}
+
+body.theme-blue {
+    --primary-color: #2196f3;
+    --primary-dark: #1565c0;
+    --primary-light: #bbdefb;
+    --background: #e3f2fd;
+    --surface: #e1f5fe;
+}
+
+body.theme-purple {
+    --primary-color: #9c27b0;
+    --primary-dark: #6a1b9a;
+    --primary-light: #e1bee7;
+    --background: #f3e5f5;
+    --surface: #ede7f6;
 }
 
 #app {
@@ -23,22 +57,128 @@ header {
 }
 
 h1 {
-    color: #1b5e20;
+    color: var(--primary-dark, #1b5e20);
     font-size: 2.5em;
     margin-bottom: 20px;
     font-weight: 700;
     letter-spacing: 1px;
 }
 
+/* Player Settings Panel */
+.settings-panel {
+    background: var(--surface, #e8f5e8);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--primary-light, #c8e6c9);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-row label {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--primary-dark, #2e7d32);
+}
+
+#player-name, #theme-select {
+    padding: 8px 12px;
+    border: 2px solid var(--primary-light, #c8e6c9);
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    color: var(--primary-dark, #2e7d32);
+    transition: all 0.3s ease;
+}
+
+#player-name:focus, #theme-select:focus {
+    outline: none;
+    border-color: var(--primary-color, #4caf50);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+/* Game Code Display */
+#game-code-display {
+    background: var(--surface, #e8f5e8);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 2px solid var(--primary-color, #4caf50);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.game-code-container, .share-url-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.share-url-container {
+    margin-bottom: 0;
+}
+
+.game-code-label, .share-label {
+    font-weight: 600;
+    color: var(--primary-dark, #2e7d32);
+    min-width: 80px;
+}
+
+.game-code {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary-color, #4caf50);
+    background: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 2px solid var(--primary-color, #4caf50);
+    letter-spacing: 2px;
+}
+
+#share-url {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid var(--primary-light, #c8e6c9);
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    color: var(--primary-dark, #2e7d32);
+}
+
+.copy-btn {
+    padding: 8px 12px;
+    background: var(--primary-color, #4caf50);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.copy-btn:hover {
+    background: var(--primary-dark, #2e7d32);
+    transform: translateY(-1px);
+}
+
 #game-info {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #e8f5e8;
+    background: var(--surface, #e8f5e8);
     padding: 15px;
     border-radius: 12px;
-    color: #2e7d32;
-    border: 1px solid #c8e6c9;
+    color: var(--primary-dark, #2e7d32);
+    border: 1px solid var(--primary-light, #c8e6c9);
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
@@ -62,8 +202,8 @@ h1 {
 }
 
 #connection-status.connected {
-    background: #c8e6c9;
-    color: #2e7d32;
+    background: var(--primary-light, #c8e6c9);
+    color: var(--primary-dark, #2e7d32);
 }
 
 #connection-status.disconnected {
@@ -150,25 +290,25 @@ button:active {
 }
 
 #new-game-btn {
-    background: #4caf50;
+    background: var(--primary-color, #4caf50);
     color: white;
-    border-color: #4caf50;
+    border-color: var(--primary-color, #4caf50);
 }
 
 #new-game-btn:hover {
-    background: #388e3c;
-    border-color: #388e3c;
+    background: var(--primary-dark, #388e3c);
+    border-color: var(--primary-dark, #388e3c);
 }
 
 #give-clue-btn, #show-clue-input-btn {
-    background: #66bb6a;
+    background: var(--primary-color, #66bb6a);
     color: white;
-    border-color: #66bb6a;
+    border-color: var(--primary-color, #66bb6a);
 }
 
 #give-clue-btn:hover, #show-clue-input-btn:hover {
-    background: #4caf50;
-    border-color: #4caf50;
+    background: var(--primary-dark, #4caf50);
+    border-color: var(--primary-dark, #4caf50);
 }
 
 #end-turn-btn {
@@ -235,9 +375,9 @@ button:active {
 }
 
 .card.green {
-    background: #4caf50;
+    background: var(--primary-color, #4caf50);
     color: white;
-    border-color: #2e7d32;
+    border-color: var(--primary-dark, #2e7d32);
     box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
 }
 
