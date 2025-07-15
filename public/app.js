@@ -14,9 +14,12 @@ class CodenamesDuetApp {
     }
 
     init() {
+        console.log('Initializing CodenamesDuetApp...');
         this.setupEventListeners();
+        this.loadPreferences(); // Load preferences first
         this.checkForGameCode();
         this.loadGameState();
+        console.log('Initialization complete');
     }
     
     checkForGameCode() {
@@ -41,9 +44,6 @@ class CodenamesDuetApp {
         document.getElementById('copy-link-btn').addEventListener('click', () => this.copyShareLink());
         document.getElementById('player-name').addEventListener('change', () => this.updatePlayerName());
         document.getElementById('theme-select').addEventListener('change', () => this.updateTheme());
-        
-        // Load saved preferences
-        this.loadPreferences();
     }
 
     async apiCall(endpoint, method = 'GET', body = null) {
@@ -93,14 +93,18 @@ class CodenamesDuetApp {
 
     async newGame() {
         try {
+            console.log('Creating new game...');
             this.disconnectWebSocket();
             // Use the new create endpoint that generates a game code
             this.gameState = await this.apiCall('/game/create', 'POST');
+            console.log('New game created:', this.gameState);
             if (this.gameState.gameCode) {
                 this.gameId = this.gameState.gameCode;
+                console.log('Game code set:', this.gameId);
                 this.connectWebSocket();
             }
             this.updateUI();
+            console.log('UI updated after new game');
         } catch (error) {
             console.error('Error creating new game:', error);
             alert('Error creating new game. Please refresh the page.');
@@ -531,15 +535,22 @@ class CodenamesDuetApp {
     }
     
     showGameCode(gameCode) {
+        console.log('Showing game code:', gameCode);
         const gameCodeDisplay = document.getElementById('game-code-display');
         const gameCodeText = document.getElementById('game-code-text');
         const shareUrl = document.getElementById('share-url');
+        
+        if (!gameCodeDisplay || !gameCodeText || !shareUrl) {
+            console.error('Game code elements not found in DOM');
+            return;
+        }
         
         gameCodeText.textContent = gameCode;
         const gameUrl = `${window.location.origin}${window.location.pathname}?code=${gameCode}`;
         shareUrl.value = gameUrl;
         
         gameCodeDisplay.classList.remove('hidden');
+        console.log('Game code display should now be visible');
     }
     
     copyGameCode() {
