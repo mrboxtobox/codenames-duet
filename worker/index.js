@@ -81,8 +81,17 @@ export class GameState {
 
       if (request.method === 'POST' && path === '/game/new') {
         this.game.reset();
-        this.gameCode = this.generateShortCode();
-        this.createdAt = Date.now();
+        
+        // Check if a game code was passed in the URL
+        const providedGameCode = url.searchParams.get('gameCode');
+        if (providedGameCode) {
+          this.gameCode = providedGameCode;
+          this.createdAt = Date.now();
+        } else if (!this.gameCode) {
+          // Only generate a new code if we don't already have one
+          this.gameCode = this.generateShortCode();
+          this.createdAt = Date.now();
+        }
         
         const gameState = this.game.getGameState();
         gameState.gameCode = this.gameCode;
@@ -379,6 +388,45 @@ export default {
         });
       }
       
+      // Generate a new game with code route
+      if (url.pathname === '/api/game/create' && request.method === 'POST') {
+        // Generate a short code for consonants and vowels readability
+        const consonants = 'BCDFGHJKLMNPQRSTVWXYZ';
+        const vowels = 'AEIOU';
+        let gameCode = '';
+        
+        for (let i = 0; i < 6; i++) {
+          if (i % 2 === 0) {
+            gameCode += consonants[Math.floor(Math.random() * consonants.length)];
+          } else {
+            gameCode += vowels[Math.floor(Math.random() * vowels.length)];
+          }
+        }
+        
+        // Create the game using the generated code as the ID
+        const id = env.GAME_STATE.idFromName(gameCode);
+        const gameState = env.GAME_STATE.get(id);
+        
+        // Create a new URL for the durable object call
+        const doUrl = new URL(request.url);
+        doUrl.pathname = '/game/new';
+        doUrl.searchParams.set('gameCode', gameCode);
+        
+        const response = await gameState.fetch(doUrl.toString(), {
+          method: 'POST',
+          headers: request.headers,
+          body: request.body
+        });
+        
+        const newResponse = new Response(response.body, response);
+        Object.entries(securityHeaders).forEach(([key, value]) => {
+          newResponse.headers.set(key, value);
+        });
+        newResponse.headers.set('Access-Control-Allow-Origin', '*');
+        
+        return newResponse;
+      }
+      
       // Game code lookup route
       if (url.pathname === '/api/game/lookup' && request.method === 'GET') {
         const gameCode = url.searchParams.get('code');
@@ -396,7 +444,12 @@ export default {
         const id = env.GAME_STATE.idFromName(gameCode.toUpperCase());
         const gameState = env.GAME_STATE.get(id);
         
-        const response = await gameState.fetch(url.toString().replace('/lookup', '/join'), {
+        // Create a new URL for the durable object call
+        const doUrl = new URL(request.url);
+        doUrl.pathname = '/game/join';
+        doUrl.search = ''; // Remove query parameters
+        
+        const response = await gameState.fetch(doUrl.toString(), {
           method: 'GET',
           headers: request.headers
         });

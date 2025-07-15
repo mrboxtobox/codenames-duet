@@ -94,10 +94,8 @@ class CodenamesDuetApp {
     async newGame() {
         try {
             this.disconnectWebSocket();
-            // Generate a random game ID for the new game
-            const newGameId = 'game_' + Math.random().toString(36).substr(2, 9);
-            this.gameId = newGameId;
-            this.gameState = await this.apiCall(`/game/new?gameId=${newGameId}`, 'POST');
+            // Use the new create endpoint that generates a game code
+            this.gameState = await this.apiCall('/game/create', 'POST');
             if (this.gameState.gameCode) {
                 this.gameId = this.gameState.gameCode;
                 this.connectWebSocket();
