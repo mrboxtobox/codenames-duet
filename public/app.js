@@ -2,7 +2,8 @@ class CodenamesDuetApp {
     constructor() {
         this.gameId = 'default';
         this.gameState = null;
-        this.apiBase = window.location.origin + '/api';
+        // Use the worker URL directly for API calls
+        this.apiBase = 'https://codenames-duet-worker.oluwasanya-awe.workers.dev/api';
         this.init();
     }
 
