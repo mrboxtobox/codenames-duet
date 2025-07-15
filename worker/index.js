@@ -5,6 +5,9 @@ export class GameState {
     this.state = state;
     this.env = env;
     this.game = new CodenamesDuetGame();
+    this.sessions = new Map(); // WebSocket sessions
+    this.gameCode = null;
+    this.createdAt = null;
   }
 
   validateInput(input, type) {
@@ -28,20 +31,70 @@ export class GameState {
     }
   }
 
+  generateShortCode() {
+    // Generate a 6-character code using consonants and vowels for readability
+    const consonants = 'BCDFGHJKLMNPQRSTVWXYZ';
+    const vowels = 'AEIOU';
+    let code = '';
+    
+    for (let i = 0; i < 6; i++) {
+      if (i % 2 === 0) {
+        code += consonants[Math.floor(Math.random() * consonants.length)];
+      } else {
+        code += vowels[Math.floor(Math.random() * vowels.length)];
+      }
+    }
+    
+    return code;
+  }
+
+  broadcast(message) {
+    // Send message to all connected WebSocket sessions
+    for (const [sessionId, session] of this.sessions) {
+      try {
+        session.webSocket.send(JSON.stringify(message));
+      } catch (error) {
+        console.error('Failed to send message to session:', sessionId, error);
+        this.sessions.delete(sessionId);
+      }
+    }
+  }
+
   async fetch(request) {
     try {
       const url = new URL(request.url);
       const path = url.pathname;
 
+      // WebSocket upgrade
+      if (request.headers.get('Upgrade') === 'websocket') {
+        return this.handleWebSocket(request);
+      }
+
       if (request.method === 'GET' && path === '/game/state') {
-        return new Response(JSON.stringify(this.game.getGameState()), {
+        const gameState = this.game.getGameState();
+        gameState.gameCode = this.gameCode;
+        gameState.playerCount = this.sessions.size;
+        return new Response(JSON.stringify(gameState), {
           headers: { 'Content-Type': 'application/json' }
         });
       }
 
       if (request.method === 'POST' && path === '/game/new') {
         this.game.reset();
-        return new Response(JSON.stringify(this.game.getGameState()), {
+        this.gameCode = this.generateShortCode();
+        this.createdAt = Date.now();
+        
+        const gameState = this.game.getGameState();
+        gameState.gameCode = this.gameCode;
+        gameState.playerCount = this.sessions.size;
+        
+        // Broadcast new game to all connected players
+        this.broadcast({
+          type: 'gameStateUpdate',
+          gameState: gameState
+        });
+        
+        return new Response(JSON.stringify(gameState), {
           headers: { 'Content-Type': 'application/json' }
         });
       }
@@ -65,9 +118,21 @@ export class GameState {
         }
 
         const result = this.game.giveClue(body.clue, body.number);
+        const gameState = this.game.getGameState();
+        gameState.gameCode = this.gameCode;
+        gameState.playerCount = this.sessions.size;
+        
+        // Broadcast clue to all players
+        this.broadcast({
+          type: 'clueGiven',
+          clue: body.clue,
+          number: body.number,
+          gameState: gameState
+        });
+        
         return new Response(JSON.stringify({
           ...result,
-          gameState: this.game.getGameState()
+          gameState: gameState
         }), {
           headers: { 'Content-Type': 'application/json' }
         });
@@ -92,9 +157,22 @@ export class GameState {
         }
 
         const result = this.game.makeGuess(body.row, body.col);
+        const gameState = this.game.getGameState();
+        gameState.gameCode = this.gameCode;
+        gameState.playerCount = this.sessions.size;
+        
+        // Broadcast guess to all players
+        this.broadcast({
+          type: 'guessMade',
+          row: body.row,
+          col: body.col,
+          result: result.result,
+          gameState: gameState
+        });
+        
         return new Response(JSON.stringify({
           ...result,
-          gameState: this.game.getGameState()
+          gameState: gameState
         }), {
           headers: { 'Content-Type': 'application/json' }
         });
@@ -102,7 +180,35 @@ export class GameState {
 
       if (request.method === 'POST' && path === '/game/end-turn') {
         this.game.endTurn();
-        return new Response(JSON.stringify(this.game.getGameState()), {
+        const gameState = this.game.getGameState();
+        gameState.gameCode = this.gameCode;
+        gameState.playerCount = this.sessions.size;
+        
+        // Broadcast turn end to all players
+        this.broadcast({
+          type: 'turnEnded',
+          gameState: gameState
+        });
+        
+        return new Response(JSON.stringify(gameState), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (request.method === 'GET' && path === '/game/join') {
+        // Return game state for joining
+        if (!this.gameCode) {
+          return new Response(JSON.stringify({ error: 'No active game' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
+        const gameState = this.game.getGameState();
+        gameState.gameCode = this.gameCode;
+        gameState.playerCount = this.sessions.size;
+        
+        return new Response(JSON.stringify(gameState), {
           headers: { 'Content-Type': 'application/json' }
         });
       }
@@ -119,6 +225,56 @@ export class GameState {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+  }
+
+  async handleWebSocket(request) {
+    const webSocketPair = new WebSocketPair();
+    const [client, server] = Object.values(webSocketPair);
+    
+    const sessionId = crypto.randomUUID();
+    
+    server.accept();
+    
+    // Store the WebSocket session
+    this.sessions.set(sessionId, {
+      webSocket: server,
+      connectedAt: Date.now()
+    });
+    
+    // Send initial game state
+    const gameState = this.game.getGameState();
+    gameState.gameCode = this.gameCode;
+    gameState.playerCount = this.sessions.size;
+    
+    server.send(JSON.stringify({
+      type: 'connected',
+      sessionId: sessionId,
+      gameState: gameState
+    }));
+    
+    // Notify other players of new connection
+    this.broadcast({
+      type: 'playerJoined',
+      playerCount: this.sessions.size
+    });
+    
+    server.addEventListener('close', () => {
+      this.sessions.delete(sessionId);
+      // Notify remaining players
+      this.broadcast({
+        type: 'playerLeft',
+        playerCount: this.sessions.size
+      });
+    });
+    
+    server.addEventListener('error', () => {
+      this.sessions.delete(sessionId);
+    });
+    
+    return new Response(null, {
+      status: 101,
+      webSocket: client
+    });
   }
 }
 
@@ -223,9 +379,40 @@ export default {
         });
       }
       
+      // Game code lookup route
+      if (url.pathname === '/api/game/lookup' && request.method === 'GET') {
+        const gameCode = url.searchParams.get('code');
+        if (!gameCode || gameCode.length !== 6) {
+          return new Response(JSON.stringify({ error: 'Invalid game code' }), {
+            status: 400,
+            headers: {
+              ...securityHeaders,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+        
+        // Use game code as the game ID for Durable Object
+        const id = env.GAME_STATE.idFromName(gameCode.toUpperCase());
+        const gameState = env.GAME_STATE.get(id);
+        
+        const response = await gameState.fetch(url.toString().replace('/lookup', '/join'), {
+          method: 'GET',
+          headers: request.headers
+        });
+        
+        const newResponse = new Response(response.body, response);
+        Object.entries(securityHeaders).forEach(([key, value]) => {
+          newResponse.headers.set(key, value);
+        });
+        newResponse.headers.set('Access-Control-Allow-Origin', '*');
+        
+        return newResponse;
+      }
+      
       // Game API routes
       if (url.pathname.startsWith('/api/game/')) {
-        const gameId = sanitizeGameId(url.searchParams.get('gameId') || 'default');
+        const gameId = sanitizeGameId(url.searchParams.get('gameId') || url.searchParams.get('code') || 'default');
         
         // Validate game ID length
         if (gameId.length === 0) {

@@ -42,6 +42,40 @@ h1 {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
+.game-status-left {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.game-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#connection-status {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+#connection-status.connected {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+
+#connection-status.disconnected {
+    background: #ffcdd2;
+    color: #c62828;
+}
+
+#player-count {
+    font-size: 14px;
+    font-weight: 600;
+}
+
 #clue-section {
     background: white;
     padding: 25px;
@@ -67,13 +101,13 @@ h1 {
     color: #666;
 }
 
-#clue-input {
+#clue-input, #join-game-input {
     display: flex;
     gap: 10px;
     margin-bottom: 15px;
 }
 
-#clue-input input {
+#clue-input input, #join-game-input input {
     flex: 1;
     padding: 12px;
     border: 2px solid #c8e6c9;
@@ -83,7 +117,7 @@ h1 {
     transition: all 0.3s ease;
 }
 
-#clue-input input:focus {
+#clue-input input:focus, #join-game-input input:focus {
     outline: none;
     border-color: #4caf50;
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
@@ -305,6 +339,64 @@ button:active {
     }
     
     .easter-egg {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #2e7d32;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideInBottom 0.3s ease-out, fadeOut 0.3s ease-out 1.7s forwards;
+    max-width: 300px;
+}
+
+@keyframes slideInBottom {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    #game-info {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .game-status-left {
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
+    
+    .game-actions {
+        justify-content: center;
+    }
+    
+    #clue-input, #join-game-input {
+        flex-direction: column;
+    }
+    
+    .card {
+        font-size: 12px;
+    }
+    
+    .notification {
         right: 10px;
         left: 10px;
         max-width: none;

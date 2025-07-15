@@ -4,12 +4,25 @@ class CodenamesDuetApp {
         this.gameState = null;
         // Use the worker URL directly for API calls
         this.apiBase = 'https://codenames-duet-worker.oluwasanya-awe.workers.dev/api';
+        this.wsUrl = 'wss://codenames-duet-worker.oluwasanya-awe.workers.dev/api/game/';
+        this.websocket = null;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
         this.init();
     }
 
     init() {
         this.setupEventListeners();
+        this.checkForGameCode();
         this.loadGameState();
+    }
+    
+    checkForGameCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameCode = urlParams.get('code');
+        if (gameCode) {
+            this.joinGameByCode(gameCode);
+        }
     }
 
     setupEventListeners() {
@@ -18,6 +31,10 @@ class CodenamesDuetApp {
         document.getElementById('give-clue-btn').addEventListener('click', () => this.giveClue());
         document.getElementById('cancel-clue-btn').addEventListener('click', () => this.hideClueInput());
         document.getElementById('end-turn-btn').addEventListener('click', () => this.endTurn());
+        document.getElementById('share-game-btn').addEventListener('click', () => this.shareGame());
+        document.getElementById('join-game-btn').addEventListener('click', () => this.showJoinGameInput());
+        document.getElementById('join-by-code-btn').addEventListener('click', () => this.joinGameByCodeInput());
+        document.getElementById('cancel-join-btn').addEventListener('click', () => this.hideJoinGameInput());
     }
 
     async apiCall(endpoint, method = 'GET', body = null) {
@@ -61,7 +78,12 @@ class CodenamesDuetApp {
 
     async newGame() {
         try {
+            this.disconnectWebSocket();
             this.gameState = await this.apiCall('/game/new', 'POST');
+            if (this.gameState.gameCode) {
+                this.gameId = this.gameState.gameCode;
+                this.connectWebSocket();
+            }
             this.updateUI();
         } catch (error) {
             console.error('Error creating new game:', error);
@@ -167,6 +189,20 @@ class CodenamesDuetApp {
         // Update player info
         document.getElementById('current-player').textContent = `Player ${this.gameState.currentPlayer}'s Turn`;
         document.getElementById('moves-left').textContent = `Moves: ${this.gameState.moves}/${this.gameState.maxMoves}`;
+
+        // Update player count and game code info
+        if (this.gameState.playerCount !== undefined) {
+            this.updatePlayerCount(this.gameState.playerCount);
+        }
+        
+        // Show/hide share button based on game code availability
+        const shareBtn = document.getElementById('share-game-btn');
+        if (this.gameState.gameCode) {
+            shareBtn.classList.remove('hidden');
+            shareBtn.title = `Game Code: ${this.gameState.gameCode}`;
+        } else {
+            shareBtn.classList.add('hidden');
+        }
 
         // Update clue info
         const clueText = this.gameState.clue 
@@ -282,6 +318,194 @@ class CodenamesDuetApp {
         setTimeout(() => {
             easterEggDiv.remove();
         }, 3000);
+    }
+    
+    connectWebSocket() {
+        if (this.websocket) {
+            this.websocket.close();
+        }
+        
+        const wsUrl = `${this.wsUrl}?gameId=${this.gameId}`;
+        this.websocket = new WebSocket(wsUrl);
+        
+        this.websocket.onopen = () => {
+            console.log('WebSocket connected');
+            this.reconnectAttempts = 0;
+            this.updateConnectionStatus(true);
+        };
+        
+        this.websocket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            this.handleWebSocketMessage(message);
+        };
+        
+        this.websocket.onclose = () => {
+            console.log('WebSocket disconnected');
+            this.updateConnectionStatus(false);
+            this.attemptReconnect();
+        };
+        
+        this.websocket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }
+    
+    disconnectWebSocket() {
+        if (this.websocket) {
+            this.websocket.close();
+            this.websocket = null;
+        }
+    }
+    
+    attemptReconnect() {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            setTimeout(() => {
+                console.log(`Reconnection attempt ${this.reconnectAttempts}`);
+                this.connectWebSocket();
+            }, 1000 * this.reconnectAttempts);
+        }
+    }
+    
+    handleWebSocketMessage(message) {
+        switch (message.type) {
+            case 'connected':
+                this.gameState = message.gameState;
+                this.updateUI();
+                break;
+            case 'gameStateUpdate':
+            case 'clueGiven':
+            case 'guessMade':
+            case 'turnEnded':
+                this.gameState = message.gameState;
+                this.updateUI();
+                if (message.type === 'clueGiven') {
+                    this.showNotification(`Clue given: ${message.clue} (${message.number})`);
+                } else if (message.type === 'guessMade') {
+                    this.showNotification(`Card revealed: ${message.result}`);
+                }
+                break;
+            case 'playerJoined':
+                this.showNotification('A player joined the game!');
+                this.updatePlayerCount(message.playerCount);
+                break;
+            case 'playerLeft':
+                this.showNotification('A player left the game.');
+                this.updatePlayerCount(message.playerCount);
+                break;
+        }
+    }
+    
+    updateConnectionStatus(connected) {
+        const statusElement = document.getElementById('connection-status');
+        if (statusElement) {
+            statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+            statusElement.className = connected ? 'connected' : 'disconnected';
+        }
+    }
+    
+    updatePlayerCount(count) {
+        const countElement = document.getElementById('player-count');
+        if (countElement) {
+            countElement.textContent = `Players: ${count}`;
+        }
+    }
+    
+    showNotification(message) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 2000);
+    }
+    
+    async shareGame() {
+        if (!this.gameState?.gameCode) {
+            alert('No active game to share!');
+            return;
+        }
+        
+        const gameUrl = `${window.location.origin}${window.location.pathname}?code=${this.gameState.gameCode}`;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Codenames Duet Game',
+                    text: `Join my Codenames Duet game with code: ${this.gameState.gameCode}`,
+                    url: gameUrl
+                });
+            } catch (error) {
+                console.log('Share failed:', error);
+                this.copyToClipboard(gameUrl);
+            }
+        } else {
+            this.copyToClipboard(gameUrl);
+        }
+    }
+    
+    copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            this.showNotification('Game link copied to clipboard!');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showNotification('Game link copied to clipboard!');
+        });
+    }
+    
+    showJoinGameInput() {
+        document.getElementById('join-game-input').classList.remove('hidden');
+        document.getElementById('join-game-btn').classList.add('hidden');
+        document.getElementById('game-code-input').focus();
+    }
+    
+    hideJoinGameInput() {
+        document.getElementById('join-game-input').classList.add('hidden');
+        document.getElementById('join-game-btn').classList.remove('hidden');
+        document.getElementById('game-code-input').value = '';
+    }
+    
+    async joinGameByCodeInput() {
+        const gameCode = document.getElementById('game-code-input').value.trim().toUpperCase();
+        if (!gameCode || gameCode.length !== 6) {
+            alert('Please enter a valid 6-character game code');
+            return;
+        }
+        
+        await this.joinGameByCode(gameCode);
+        this.hideJoinGameInput();
+    }
+    
+    async joinGameByCode(gameCode) {
+        try {
+            this.disconnectWebSocket();
+            const response = await fetch(`${this.apiBase}/game/lookup?code=${gameCode}`);
+            
+            if (!response.ok) {
+                throw new Error('Game not found');
+            }
+            
+            this.gameState = await response.json();
+            this.gameId = gameCode;
+            this.connectWebSocket();
+            this.updateUI();
+            
+            // Update URL without page reload
+            window.history.pushState({}, '', `?code=${gameCode}`);
+            
+            this.showNotification(`Joined game: ${gameCode}`);
+        } catch (error) {
+            console.error('Error joining game:', error);
+            alert('Could not join game. Please check the code and try again.');
+        }
     }
 }
 

@@ -11,9 +11,17 @@
         <header>
             <h1>Codenames: Duet</h1>
             <div id="game-info">
-                <span id="current-player">Player 1's Turn</span>
-                <span id="moves-left">Moves: 9/9</span>
-                <button id="new-game-btn">New Game</button>
+                <div class="game-status-left">
+                    <span id="current-player">Player 1's Turn</span>
+                    <span id="moves-left">Moves: 9/9</span>
+                    <span id="player-count">Players: 1</span>
+                    <span id="connection-status" class="disconnected">Disconnected</span>
+                </div>
+                <div class="game-actions">
+                    <button id="new-game-btn">New Game</button>
+                    <button id="share-game-btn" class="hidden">Share Game</button>
+                    <button id="join-game-btn">Join Game</button>
+                </div>
             </div>
         </header>
 
@@ -29,6 +37,12 @@
                     <input type="number" id="clue-number" min="1" max="5" placeholder="Number">
                     <button id="give-clue-btn">Give Clue</button>
                     <button id="cancel-clue-btn">Cancel</button>
+                </div>
+                
+                <div id="join-game-input" class="hidden">
+                    <input type="text" id="game-code-input" placeholder="Enter 6-letter game code" maxlength="6">
+                    <button id="join-by-code-btn">Join</button>
+                    <button id="cancel-join-btn">Cancel</button>
                 </div>
                 
                 <div id="clue-actions">
